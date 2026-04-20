@@ -1,45 +1,37 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List
 
 app = FastAPI()
 
-# Definiamo cosa ci aspettiamo di ricevere da Flutter
+# Configurazione CORS per permettere a Flutter di chiamare il server
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Definiamo lo schema dei dati che arrivano da Flutter
 class PlannerRequest(BaseModel):
     budget: int
-    strategy: String
+    strategy: str
 
-# Modello per il giocatore singolo
-class Player(BaseModel):
-    nome: str
-    ruolo: str
-    costo: int
+# Rotta Home (per testare se il server è vivo dal browser)
+@app.get("/")
+def read_root():
+    return {"status": "Online", "message": "Fanta AI Backend pronto!"}
 
-# Rotta principale per l'ottimizzazione
+# Rotta di Ottimizzazione
 @app.post("/optimize")
 async def optimize_squad(request: PlannerRequest):
-    # QUI ANDRÀ IL TUO ALGORITMO (Knapsack o AI Agent)
-    # Per ora simuliamo una risposta intelligente
-    
-    suggerimenti = []
-    if request.strategy == "Aggressiva":
-        suggerimenti = [
-            {"nome": "Lautaro Martinez", "ruolo": "A", "costo": 150},
-            {"nome": "Leao", "ruolo": "A", "costo": 100}
-        ]
-    else:
-        suggerimenti = [
-            {"nome": "Di Lorenzo", "ruolo": "D", "costo": 20},
-            {"nome": "Calhanoglu", "ruolo": "C", "costo": 45}
-        ]
-
+    # Logica temporanea di risposta
     return {
         "status": "success",
-        "budget_usato": sum(p["costo"] for p in suggerimenti),
-        "consiglio_ai": f"Con una strategia {request.strategy}, ho dato priorità ai bonus immediati.",
-        "giocatori": suggerimenti
+        "messaggio_ai": f"Analisi completata per budget {request.budget} con strategia {request.strategy}.",
+        "giocatori": [
+            {"nome": "Maignan", "ruolo": "P", "costo": 25},
+            {"nome": "Lautaro", "ruolo": "A", "costo": 120}
+        ]
     }
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)

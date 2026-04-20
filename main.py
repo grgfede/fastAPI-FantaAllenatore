@@ -1,10 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import pandas as pd
+import os
 
 app = FastAPI()
 
-# Configurazione CORS per permettere a Flutter di chiamare il server
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -13,25 +14,46 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Definiamo lo schema dei dati che arrivano da Flutter
 class PlannerRequest(BaseModel):
     budget: int
     strategy: str
 
-# Rotta Home (per testare se il server è vivo dal browser)
-@app.get("/")
-def read_root():
-    return {"status": "Online", "message": "Fanta AI Backend pronto!"}
+def carica_giocatori_reali():
+    file_path = "quotazioni.csv"
+    if not os.path.exists(file_path):
+        return [{"n": "CSV non trovato", "r": "P", "s": "Errore", "q": 0}]
+    
+    try:
+        # Carichiamo il CSV. 
+        # Nota: l'export di Fantacalcio spesso usa il punto e virgola ';'
+        df = pd.read_csv(file_path, sep=";", encoding="utf-8")
+        
+        # Puliamo i nomi delle colonne per sicurezza (rimuove spazi bianchi)
+        df.columns = df.columns.str.strip()
 
-# Rotta di Ottimizzazione
+        giocatori = []
+        for _, row in df.iterrows():
+            # Usiamo i nomi esatti delle tue colonne
+            giocatori.append({
+                "n": str(row['Nome']),
+                "r": str(row['R']),
+                "s": str(row['Squadra']),
+                "q": int(row['Qt. A']) # 'Qt. A' è la quotazione attuale
+            })
+        return giocatori
+    except Exception as e:
+        print(f"Errore: {e}")
+        return []
+
 @app.post("/optimize")
 async def optimize_squad(request: PlannerRequest):
-    # Logica temporanea di risposta
+    lista_completa = carica_giocatori_reali()
+    
+    # Esempio: prendiamo i primi 20 per vedere se arrivano su Flutter
+    mini_lista = lista_completa[:20] 
+
     return {
         "status": "success",
-        "messaggio_ai": f"Analisi completata per budget {request.budget} con strategia {request.strategy}.",
-        "giocatori": [
-            {"nome": "Maignan", "ruolo": "P", "costo": 25},
-            {"nome": "Lautaro", "ruolo": "A", "costo": 120}
-        ]
+        "messaggio_ai": f"Database caricato. Trovati {len(lista_completa)} giocatori.",
+        "giocatori": mini_lista
     }
